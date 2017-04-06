@@ -4,6 +4,7 @@
 
 #include <vector>
 
+#include <glm/gtx/rotate_vector.hpp>
 
 struct Camera
 {
@@ -15,6 +16,19 @@ struct Camera
 	float far;
 
 	float fov;
+	float exposure;
+	float contrast;
+};
+
+struct DebugObject
+{
+	GLfloat* data;
+	int data_size;
+	GLuint VBO, VAO;
+	int length;
+	int vertexCount;
+	int type;
+	float duration;
 };
 
 class SceneRenderer
@@ -23,6 +37,9 @@ public:
 
 
 	std::vector<Drawable*> drawables;
+
+	std::vector<DebugObject> debug;
+
 
 	Camera camera;
 
@@ -37,7 +54,14 @@ public:
 
 	void start(int WIDTH, int HEIGHT);
 
-	void draw(int WIDTH, int HEIGHT);
+	void draw(int WIDTH, int HEIGHT, float dt);
+
+	// Debug drawing routine. Draws a line
+	void drawDebugLine(glm::vec3 start, glm::vec3 end, glm::vec3 color, float duration);
+
+	// Debug drawing routine. Draws a pointed arrow
+	void drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 color, float duration);
+
 
 	SceneRenderer();
 	~SceneRenderer();
@@ -61,6 +85,7 @@ private:
 
 	Shader frameShader;
 	Shader shadowShader;
+	Shader debugShader;
 
 	int doEffect = 1;
 
@@ -68,7 +93,7 @@ private:
 	float shadowNPlane = 1.0f;
 	float shadowFPlane = 90.5f;
 
-	const GLuint shadowWidth = 1024, shadowHeight = 1024;
+	const GLuint shadowWidth = 512, shadowHeight = 512;
 
 
 };

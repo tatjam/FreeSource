@@ -1,0 +1,15 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl wire_134006006
+Ns 31.372549
+Ka 0.190833 0.190833 0.190833
+Kd 0.525500 0.023500 0.023500
+Ks 0.350000 0.350000 0.350000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd duck_diff.png
+map_Ks duck_spec.png
+map_Bump duck_normal.png

@@ -4,6 +4,7 @@
 
 void Shader::readFromFile(const char* vertexPath, const char* fragmentPath)
 {
+	LOG_F(INFO, "Loading shader (V:%s, F:%s)", vertexPath, fragmentPath);
 	const char *vertexCode, *fragmentCode;
 	std::ifstream vertexCodeStream, fragmentCodeStream;
 
@@ -45,7 +46,7 @@ void Shader::readFromFile(const char* vertexPath, const char* fragmentPath)
 	}
 	catch(std::ifstream::failure e)
 	{
-		Debug::error("Could not read/open shader file");
+		LOG_F(ERROR, "Could not load shader! (VPath: %s, FPath: %s)", vertexPath, fragmentPath);
 		status = ErrorType::IO_ERROR;
 		return;
 	}
@@ -69,8 +70,8 @@ void Shader::readFromFile(const char* vertexPath, const char* fragmentPath)
 	if (!success)
 	{
 		glGetShaderInfoLog(vertex, 512, NULL, infoLog);
-		Debug::error("Could not compile vertex shader, error log: \n");
-		Debug::error(infoLog);
+		LOG_F(ERROR, "Vertex Shader compilation error:");
+		LOG_F(ERROR, "LOG: %s", infoLog);
 	}
 
 	// Same for fragment shader
@@ -85,8 +86,8 @@ void Shader::readFromFile(const char* vertexPath, const char* fragmentPath)
 	if (!success)
 	{
 		glGetShaderInfoLog(fragment, 512, NULL, infoLog);
-		Debug::error("Could not compile fragment shader, error log: \n");
-		Debug::error(infoLog);
+		LOG_F(ERROR, "Fragment Shader compilation error:");
+		LOG_F(ERROR, "LOG: %s", infoLog);
 	}
 
 	// Link the program
@@ -100,8 +101,8 @@ void Shader::readFromFile(const char* vertexPath, const char* fragmentPath)
 	if (!success)
 	{
 		glGetProgramInfoLog(this->programID, 512, NULL, infoLog);
-		Debug::error("Could not link shader, error log: \n");
-		Debug::error(infoLog);
+		LOG_F(ERROR, "Shader linking error:");
+		LOG_F(ERROR, "LOG: %s", infoLog);
 	}
 
 

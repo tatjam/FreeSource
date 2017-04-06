@@ -1,6 +1,5 @@
 #include "Mesh.h"
 
-
 void Mesh::build(vector<Vertex> v, vector<GLuint> i, vector<Texture> t)
 {
 	vertices = v;
@@ -21,20 +20,21 @@ void Mesh::drawShadow(Shader s, glm::mat4 light, glm::mat4 transform)
 
 void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapId)
 {
+
 	bool diffuseLoaded = false;
 	bool specularLoaded = false;
 	bool emissionLoaded = false;
-
+	bool normalLoaded = false;
 
 	glActiveTexture(GL_TEXTURE0);
 	glUniform1i(glGetUniformLocation(s.programID, "shadowMap"), 0);
 	glBindTexture(GL_TEXTURE_2D, shadowMapId);
 	glActiveTexture(0);
 
-	for (int i = 0; i < textures.size(); i++)
+	for (int i = 0; i < (int)textures.size(); i++)
 	{
 		glActiveTexture(GL_TEXTURE1 + i);
-	
+
 		if (textures[i].type == "diffuse" && !diffuseLoaded)
 		{
 			diffuseLoaded = true;
@@ -49,6 +49,11 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 		{
 			emissionLoaded = true;
 			glUniform1i(glGetUniformLocation(s.programID, "material.emissive"), i + 1);
+		}
+		else if (textures[i].type == "normal" && !normalLoaded)
+		{
+			normalLoaded = true;
+			glUniform1i(glGetUniformLocation(s.programID, "material.normalMap"), i + 1);
 		}
 
 		glBindTexture(GL_TEXTURE_2D, textures[i].id);
@@ -72,7 +77,8 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	if (!diffuseLoaded)
 	{
 		glUniform1i(glGetUniformLocation(s.programID, "material.diffuseEnabled"), 0);
-		glUniform3f(glGetUniformLocation(s.programID, "material.diffuseValue"), 1.0f, 1.0f, 1.0f); // TODO
+		glUniform3f(glGetUniformLocation(s.programID, "material.diffuseValue"), 
+			materialData.diffuseColor.r, materialData.diffuseColor.g, materialData.diffuseColor.b); 
 	}
 	else
 	{
@@ -81,7 +87,8 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	if (!specularLoaded)
 	{
 		glUniform1i(glGetUniformLocation(s.programID, "material.specularEnabled"), 0);
-		glUniform3f(glGetUniformLocation(s.programID, "material.specularValue"), 0.1f, 0.1f, 0.1f); // TODO
+		glUniform3f(glGetUniformLocation(s.programID, "material.specularValue"),
+			materialData.specularColor.r, materialData.specularColor.g, materialData.specularColor.b);
 
 	}
 	else
@@ -91,14 +98,25 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	if (!emissionLoaded)
 	{
 		glUniform1i(glGetUniformLocation(s.programID, "material.emissiveEnabled"), 0);
-		glUniform3f(glGetUniformLocation(s.programID, "material.emissionValue"), 0.0f, 0.0f, 0.0f); // TODO
+		glUniform3f(glGetUniformLocation(s.programID, "material.emissiveValue"),
+			materialData.emissionColor.r, materialData.emissionColor.g, materialData.emissionColor.b); 
 	}
 	else
 	{
 		glUniform1i(glGetUniformLocation(s.programID, "material.emissiveEnabled"), 1);
 	}
 
-	glUniform1f(glGetUniformLocation(s.programID, "material.shininess"), 32.0f);
+	if (!normalLoaded)
+	{
+		glUniform1i(glGetUniformLocation(s.programID, "material.normalEnabled"), 0);
+	}
+	else
+	{
+		glUniform1i(glGetUniformLocation(s.programID, "material.normalEnabled"), 1);
+	}
+
+
+	glUniform1f(glGetUniformLocation(s.programID, "material.shininess"), materialData.shininess);
 
 	glUniform1f(glGetUniformLocation(s.programID, "material.emissiveForce"), materialData.emissionPower);
 
@@ -119,7 +137,7 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 		stringstream prefix;
 		prefix << "pointLights[" << i << "]";
 		
-		string comp = prefix.str();	comp += ".position";
+		std::string comp = prefix.str();	comp += ".position";
 		glUniform3f(glGetUniformLocation(s.programID, comp.c_str()), 
 			lScene.pointLights[i].position.x, 
 			lScene.pointLights[i].position.y, 
@@ -175,6 +193,11 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	glBindVertexArray(0);
 }
 
+Mesh::Mesh()
+{
+
+}
+
 void Mesh::setup()
 {
 	glGenVertexArrays(1, &this->VAO);
@@ -200,6 +223,12 @@ void Mesh::setup()
 	glEnableVertexAttribArray(2);
 	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
 		(GLvoid*)offsetof(Vertex, texCoords));
+	glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(GLvoid*)offsetof(Vertex, tangent));
+	glEnableVertexAttribArray(3);
+	glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+		(GLvoid*)offsetof(Vertex, bittangent));
+	glEnableVertexAttribArray(4);
 
 	glBindVertexArray(0);
 }

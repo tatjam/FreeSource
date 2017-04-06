@@ -18,17 +18,15 @@
     <None Include="packages.config" />
     <None Include="Resource\Shader\basic_unlit.frag" />
     <None Include="Resource\Shader\basic_unlit.vert" />
-    <None Include="Resource\Shader\framebuffer.frag" />
     <None Include="Resource\Shader\framebuffer.vert" />
     <None Include="Resource\Shader\shadow_shader.frag" />
     <None Include="Resource\Shader\shadow_shader.vert" />
     <None Include="Resource\Shader\test_shader.vert" />
     <None Include="Resource\Shader\test_shader.frag" />
+    <None Include="Resource\Shader\framebufferold.frag" />
+    <None Include="Resource\Shader\framebuffer.frag" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Engine\Client\AssetManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -50,7 +48,7 @@
     <ClCompile Include="Engine\Client\Rendering\TextureData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Engine\Util\Logger\Logger.cpp">
+    <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -94,7 +92,10 @@
     <ClInclude Include="Engine\Client\Rendering\TextureData.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Engine\Util\Logger\Logger.h">
+    <ClInclude Include="Engine\Util\loguru.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Util\tinyterm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

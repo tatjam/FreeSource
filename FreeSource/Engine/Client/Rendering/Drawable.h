@@ -1,4 +1,6 @@
 #pragma once
+
+#include "Internal/Shader.h"
 #include "Internal/LightScene.h"
 
 class Renderer;

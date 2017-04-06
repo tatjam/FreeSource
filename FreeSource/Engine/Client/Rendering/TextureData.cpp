@@ -9,6 +9,7 @@ Color TextureData::getPixel(int x, int y)
 		{
 			out = colors[width*x + y];
 		}
+		return out;
 	}
 	else
 	{
@@ -23,14 +24,15 @@ Color TextureData::getPixel(int x, int y)
 
 void TextureData::setPixel(int x, int y, Color c)
 {
-	
 	if (x < width && y < height && x > 0 && y > 0)
 	{
-		data[width*x + y] = c.r;
-		data[width*x + y + 1] = c.g;
-		if (colors)
+		int i = width * x + y;
+		i *= sizePerPixel;
+		if (i < size * sizePerPixel)
 		{
-
+			data[i] = c.r;
+			data[i + 1] = c.g;
+			data[i + 2] = c.b;
 		}
 	}
 	

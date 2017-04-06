@@ -13,6 +13,9 @@ struct Material {
 	int emissiveEnabled;
 	float emissiveForce;
 
+	sampler2D normalMap;
+	int normalEnabled;
+
     float shininess;
 
 	vec2 diffuseOffset;
@@ -56,14 +59,15 @@ in vec3 Normal;
 in vec2 TexCoords;
 in vec4 FragPosLightSpace;
 
+in mat3 TBN;
 
 out vec4 color;
   
 uniform vec3 viewPos;
 uniform Material material;
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);  
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, float shadow);  
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow);
 float CalculateShadow(vec4 fragPosLightSpace, float bias);
 
 void main()
@@ -77,6 +81,16 @@ void main()
 
 	vec3 ambient = vec3(0, 0, 0);
 
+	if(material.normalEnabled == 1)
+	{
+		vec3 normalTex = texture(material.normalMap, TexCoords).rgb;
+		normalTex = normalize(normalTex * 2.0 - 1.0);
+		normalTex = normalize(TBN * normalTex);
+
+
+		norm = normalTex;
+	}
+
 	float shadow = 1.0f;
 
 	if (dirLightActive != 0)
@@ -84,7 +98,7 @@ void main()
 		
 		shadow = CalculateShadow(FragPosLightSpace, 0.001f);
 
-		result += CalcDirLight(dirLight, norm, viewDir);
+		result += CalcDirLight(dirLight, norm, viewDir, shadow);
 
 		if(material.diffuseEnabled == 1)
 		{
@@ -98,21 +112,25 @@ void main()
 
 	for (int i = 0; i < pointLightCount; i++)
 	{
-		result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
+		result += CalcPointLight(pointLights[i], norm, FragPos, viewDir, shadow);
 	}
 
+
+
+	result *= shadow;
+	result += ambient;
 	if(material.emissiveForce > 0 && material.emissiveEnabled == 1)
 	{
 		result += vec3(texture(material.emissive, TexCoords + material.emissiveOffset) * material.emissiveForce);
 	}
 
-	result *= shadow;
-	result += ambient;
+	if(material.emissiveEnabled == 0)
+	{
+		result += vec3(material.emissiveValue) * vec3(material.emissiveForce);
+	}
 
-	//result = vec3(0.0f, 1.0f, 0.0f);
+	//result = norm;
 
-	//color = vec4(vec3(texture(material.diffuse, TexCoords)), 1.0f);
-	//color = vec4(ambient, 1.0f);
     color = vec4(result, 1.0f);
 } 
 
@@ -130,26 +148,52 @@ float CalculateShadow(vec4 fragPosLightSpace, float bias)
 	float closestDepth = texture(shadowMap, projCoords.xy).r;   
 	float currentDepth = projCoords.z;
 
+
+	// Not smoothed, comment out for slightly better perfomance
+	/*
 	if(currentDepth - bias > closestDepth)
 	{
-		return 0.0f;	
+		return 0.0f;
 	}
 	else
 	{
 		return 1.0f;
 	}
+	*/
+	
+	// Shadow smoothing
+
+	float shadow = 0.0;
+	vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+	for(int x = -1; x <= 1; ++x)
+	{
+		for(int y = -1; y <= 1; ++y)
+		{
+			float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r; 
+			shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;        
+		}    
+	}
+	shadow /= 9.0;
+	return 1.0f - shadow;
+	
+	
 }
 
 // Many thanks to learnopengl.com for all these lighting functions
 
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir, float shadow)
 {
+	/*if(material.normalEnabled == 1)
+		normal = nnormal;*/
+
     vec3 lightDir = normalize(-light.direction);
+
     // Diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // Specular shading
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+	//spec *= diff;
     // Combine results
     vec3 diffuse;
 
@@ -171,10 +215,13 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 	{
 		specular = light.specular * spec * material.specularValue;
 	}
+
+	specular *= shadow;
+
     return ( diffuse + specular);
 }  
 
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir, float shadow)
 {
 	vec3 lightDir = normalize(light.position - fragPos);
 	// Diffuse shading
@@ -206,6 +253,9 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 	{
 		specular = light.specular * spec * material.specularValue;
 	}
+
+	specular *= shadow;
+
 	diffuse *= attenuation;
 	specular *= attenuation;
 	return (diffuse + specular);

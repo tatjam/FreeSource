@@ -1,15 +1,13 @@
 #include <iostream>
 #include <cmath>
 #include <math.h>
-
+#include <thread>     
 
 
 #define GLEW_STATIC
 #include "GL/glew.h"
 #define GLFW_INCLUDE_GLU
 #include "GLFW/glfw3.h"
-
-#include "Engine/Util/Debug.h"
 
 
 #include "SOIL.h"
@@ -20,6 +18,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+
+#ifndef LOGURU_INCLUDED
+#define LOGURU_INCLUDED
+#define LOGURU_IMPLEMENTATION 1
+#include "Engine/Util/loguru.hpp"
+#endif
+
+
+#include "Engine/Client/AssetManager.h"
+
+#include "Engine/Client/Rendering/Internal/LModel.h"
+
 #include "Engine/Client/Rendering/Internal/Shader.h"
 #include "Engine/Client/Rendering/Internal/Mesh.h"
 
@@ -27,7 +37,8 @@
 
 #include "Engine/Client/Rendering/SceneRenderer.h"
 
-
+#define TERM_INCLUDE_DEFINITION
+#include "Engine/Util/tinyterm.h"
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -35,18 +46,11 @@ const GLuint WIDTH = 800, HEIGHT = 600;
 // Light attributes
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-// 
+//
 GLfloat dt = 0.0f;	// Time between current frame and last frame
 GLfloat lastFrame = 0.0f;  	// Time of last frame
 
-#include "Engine/Client/Rendering/Internal/LModel.h"
 
-
-/*
-#include "Engine/Util/rang.hpp"
-*/
-
-#include "Engine/Util/Logger/Logger.h"
 
 
 
@@ -54,11 +58,15 @@ GLfloat lastFrame = 0.0f;  	// Time of last frame
 #undef far
 
 
-
-
-int main()
+int main(int argc, char *argv[])
 {
+	// Start logger (Thx loguru :D)
+	loguru::init(argc, argv);
+	loguru::add_file("output.log", loguru::Truncate, loguru::Verbosity_MAX);
+	loguru::add_file("output_readable.log", loguru::Truncate, loguru::Verbosity_INFO);
+	loguru::g_stderr_verbosity = 1;
 
+	//LOG_SCOPE_F(INFO, "Initialization");
 
 	// Init GLFW
 	glfwInit();
@@ -83,19 +91,24 @@ int main()
 	// Define the viewport dimensions
 	glViewport(0, 0, WIDTH, HEIGHT);
 
+	LOG_F(INFO, "GLFW and OpenGL initialized");
+
 	// OpenGL options
 
+	LOG_F(INFO, "Asset loading");
 
-	AssetManager::getInstance().loadModel("Resource/q3rocket.obj", "q3rocket");
-	AssetManager::getInstance().loadModel("Resource/medieval_house.obj", "house");
+	AssetManager assetManager = AssetManager();
+
+	assetManager.loadModel("Resource/cubetest.obj", "duck");
+	assetManager.loadModel("Resource/medieval_house.obj", "mapDemo");
 
 	// Build and compile our shader program
 	Shader lightingShader("Resource/Shader/test_shader.vert", "Resource/Shader/test_shader.frag");
 	Shader lampShader("Resource/Shader/basic_unlit.vert", "Resource/Shader/basic_unlit.frag");
 
-	LModel testLModel = LModel("Resource/q3rocket.obj");
-	Model testModel = Model(AssetManager::getInstance().getModel("q3rocket"), &lightingShader);
-	Model houseModel = Model(AssetManager::getInstance().getModel("house"), &lightingShader);
+	LModel testLModel = LModel("Resource/q3rocket.obj", &assetManager);
+	Model testModel = Model(assetManager.getModel("duck"), &lightingShader, &assetManager);
+	Model houseModel = Model(assetManager.getModel("mapDemo"), &lightingShader, &assetManager);
 
 	glfwSwapInterval(0);
 
@@ -112,7 +125,7 @@ int main()
 	renderer.drawables.push_back(&testModel);
 	renderer.drawables.push_back(&houseModel);
 
-	testModel.transform.scaling = glm::vec3(0.2f, 0.2f, 0.2f);
+	testModel.transform.scaling = glm::vec3(1.3f, 1.3f, 1.3f);
 	testModel.transform.setEulerAngles(0.0f, 0.0f, 0.0f);
 	testModel.transform.buildMatrix();
 
@@ -124,70 +137,89 @@ int main()
 	renderer.lScene.dirLightEnabled = true;
 	renderer.lScene.dirLight.direction = glm::vec3(1, -0.5f, 1);
 	renderer.lScene.dirLight.diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
-	renderer.lScene.dirLight.ambient = glm::vec3(0.5f, 0.5f, 0.5f);
+	renderer.lScene.dirLight.ambient = glm::vec3(0.1f, 0.1f, 0.1f);
 	renderer.lScene.dirLight.specular = glm::vec3(0.5f, 0.5f, 0.5f);
 
 	float t = 0.0f;
 	float dt = 0.0f;	// Time between current frame and last frame
 	float lastFrame = 0.0f;  	// Time of last frame
 
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 
-	float radius = 10.0f;
+	float radius = 5.0f;
 
 	testModel.createMeshMap();
 
-	std::cout << "There are " << testModel.meshes.size() << " meshes" << std::endl;
-
 	std::vector<Mesh*> meshes = testModel.getAllMeshes();
 
-	//renderer.depthMap = AssetManager::getInstance().loadTexture("Resource/rocketl.png");
-	AssetManagerI.loadTexture("Resource/dataTest.png");
-	
-	/*
-	std::cout << "TEXTURE MEM DUMP SIZE: " << AssetManagerI.texturesData["Resource/dataTest.png"].size
-		<< ", DATA_SIZE: " << AssetManagerI.texturesData["Resource/dataTest.png"].sizePerPixel << std::endl;
+	LOG_SCOPE_F(INFO, "Game loop");
 
-	std::cout << "DATA LOCATION: " << (int)AssetManagerI.texturesData["Resource/dataTest.png"].ptr << std::endl;
+	unsigned int frameNum = 0;
 
-	for (int x = 0; x < AssetManagerI.texturesData["Resource/dataTest.png"].w; x++)
-	{
-		for (int y = 0; y < AssetManagerI.texturesData["Resource/dataTest.png"].h; y++)
-		{
-			std::cout << AssetManager::getColorString(AssetManagerI.texturesData["Resource/dataTest.png"].getPixel(x, y)) << std::endl;
-		}
-	}
 
-	for (int i = 0; i < AssetManagerI.getTexture("Resource/dataTest.png")->size * 
-		AssetManagerI.getTexture("Resource/dataTest.png")->sizePerPixel;
-		i += AssetManagerI.getTexture("Resource/dataTest.png")->sizePerPixel)
-	{
-		std::cout << "(I: " << i / AssetManagerI.getTexture("Resource/dataTest.png")->sizePerPixel << "), {" << std::endl;
-		for (int x = 0; x < AssetManagerI.getTexture("Resource/dataTest.png")->sizePerPixel; x++)
-		{
-			std::cout << "    " << (int)AssetManagerI.getTexture("Resource/dataTest.png")->ptr[i + x] << std::endl;
-		}
-		std::cout << "}" << std::endl;
 
-	}
+	float time = 0.0f;
+	renderer.camera.exposure = 1.5f;
 
-	*/
 
+	assetManager.loadTexture("Resource/test_font.bmp", 3, true, false);
+
+	LOG_F(INFO, "PRE_CREATE_STUFF");
+
+	termScreen scr = term_create_screen(20, 20);
+	termFont font = term_load_font((char*)assetManager.getTexture("Resource/test_font.bmp")->data, 
+		assetManager.getTexture("Resource/test_font.bmp")->width * 
+		assetManager.getTexture("Resource/test_font.bmp")->height * 
+		assetManager.getTexture("Resource/test_font.bmp")->sizePerPixel, 
+		assetManager.getTexture("Resource/test_font.bmp")->width, 8, 8, 0);
+	termImage img = term_create_image(20 * font.width, 20 * font.height);
+
+	LOG_F(INFO, "POST_CREATE_STUFF");
 
 	while (!glfwWindowShouldClose(window))
 	{
+
 		glfwPollEvents();
 
+
+		for (int i = 0; i < 20 * 20; i++)
+		{
+			scr.chars[i].character = (int)(i + t * 10) % 255;
+			scr.chars[i].fr = (sin(t) + 1.0f) * 128.0f;
+			scr.chars[i].fg = (cos(t) + 1.0f) * 128.0f;
+			scr.chars[i].fb = (tan(t * i / 100.0f) + 1.0f) * 128.0f;
+			scr.chars[i].bb = (sin(t) + 1.0f) * 128.0f;
+			scr.chars[i].br = (cos(t) + 1.0f) * 128.0f;
+			scr.chars[i].bg = (tan(t * i / 100.0f) + 1.0f) * 128.0f;
+		}
+
+		term_render_image(&scr, &img, &font, 1);
+
+		term_upload_gl_image(&img, assetManager.textures["Resource/AluminumOxy.png"]);
+
+		glm::vec3 endPoint;
+
+		endPoint = glm::vec3(sin(t * 2) * radius / 2, 2.0f, cos(t * 2) * radius / 2);
+
+		renderer.drawDebugArrow(glm::vec3(0, 0, 0), endPoint, glm::vec3(1, 0, 0), 0.0f);
+		renderer.drawDebugArrow(glm::vec3(0, 0, 0), glm::rotateX(endPoint, sin(t * 2)), glm::vec3(0, 0, 1), 0.0f);
+		renderer.drawDebugLine(endPoint, glm::rotateX(endPoint, sin(t * 2)), glm::vec3(0, 1, 0), 0.0f);
+
 		// Calculate dt of current frame
-		float currentFrame = glfwGetTime();
+		double currentFrame = glfwGetTime();
 		dt = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		renderer.camera.position += glm::vec3(sin(t) * dt * 5, cos(t) * 3 * dt, 0.5f * dt);
-		
+		renderer.camera.position = glm::vec3(sin(t / 2) * radius, 3.0f, cos(t / 2) * radius);
+		renderer.camera.target = glm::vec3(-2.0f, 0.0f, 0.0f);
+
 		renderer.lScene.dirLight.direction = glm::vec3(sin(t), cos(t), sin(t) * cos(t));
 
-		for (int i = 0; i < meshes.size(); i++)
+		testModel.transform.rotateEuler(0, 45.0f * dt, 5.0f * dt);
+		testModel.transform.buildMatrix();
+
+
+		for (int i = 0; i < (int)meshes.size(); i++)
 		{
 			meshes[i]->materialData.emissiveOffset = glm::vec2(sin(t) * 1, cos(t) * 1);
 			//meshes[i]->materialData.emissionPower = (sin(t) + 1) / 4;
@@ -195,12 +227,13 @@ int main()
 			//meshes[i]->materialData.diffuseOffset = glm::vec2(sin(t) * 0.2f, cos(t) * 0.2f);
 		}
 
-		renderer.draw(WIDTH, HEIGHT);
+		renderer.draw(WIDTH, HEIGHT, dt);
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
 
-		t += 1.f * dt;
+		t += dt;
+		frameNum++;
 
 	}
 

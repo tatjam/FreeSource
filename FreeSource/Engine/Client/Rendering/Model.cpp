@@ -15,7 +15,7 @@ void Model::createMeshMap()
 {
 	meshes = std::map<std::string, Mesh*>();
 
-	for (int i = 0; i < model->meshes.size(); i++)
+	for (unsigned int i = 0; i < model->meshes.size(); i++)
 	{
 		std::string ps = model->meshes[i].name;
 		if (ps == "")
@@ -23,13 +23,14 @@ void Model::createMeshMap()
 			ps = std::string("NO_NAME." + i);
 		}
 		meshes[ps] = &model->meshes[i];
+
 	}
 }
 
-std::vector<string> Model::getAllMeshNames()
+std::vector<std::string> Model::getAllMeshNames()
 {
-	vector<string> out;
-	for (map<string, Mesh*>::iterator it = meshes.begin(); it != meshes.end(); ++it) {
+	vector<std::string> out;
+	for (map<std::string, Mesh*>::iterator it = meshes.begin(); it != meshes.end(); ++it) {
 		out.push_back(it->first);
 	}
 	return out;
@@ -38,16 +39,17 @@ std::vector<string> Model::getAllMeshNames()
 std::vector<Mesh*> Model::getAllMeshes()
 {
 	vector<Mesh*> out;
-	for (map<string, Mesh*>::iterator it = meshes.begin(); it != meshes.end(); ++it) {
+	for (map<std::string, Mesh*>::iterator it = meshes.begin(); it != meshes.end(); ++it) {
 		out.push_back(it->second);
 	}
 	return out;
 }
 
-Model::Model(LModel* model, Shader* shader)
+Model::Model(LModel* model, Shader* shader, AssetManager* manager)
 {
 	this->model = model;
 	this->shader = shader;
+	this->assetManager = manager;
 }
 
 void Model::load(LModel* model, Shader* shader)
@@ -58,8 +60,14 @@ void Model::load(LModel* model, Shader* shader)
 
 void Model::load(std::string name, Shader* shader)
 {
-	this->model = AssetManager::getInstance().models[name];
+	this->model = assetManager->models[name];
 	this->shader = shader;
+}
+
+Model::Model(std::string name, Shader* shader, AssetManager* manager)
+{
+	assetManager = manager;
+	load(name, shader);
 }
 
 Model::Model()

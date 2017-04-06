@@ -4,8 +4,8 @@
 #include "../../Util/Transform.h"
 #include "../../Util/simple_multimap.h"
 #include "Drawable.h"
+#include "Internal/Mesh.h"
 #include "Internal/LModel.h"
-
 
 class LModel;
 
@@ -14,10 +14,13 @@ class Model : public Drawable
 {
 public:
 
+	AssetManager* assetManager;
 
 	// Low level mode used for rendering
-	LModel* model; 
+	LModel* model;
 	Shader* shader;
+
+	
 
 	Transform transform;
 
@@ -25,11 +28,11 @@ public:
 	std::map<std::string, Mesh*> meshes;
 
 
-	// Load the model with name "name" from the AssetManager 
+	// Load the model with name "name" from the AssetManager
 	void create(std::string name);
 
 	void createMeshMap();
-	
+
 	std::vector<std::string> getAllMeshNames();
 	std::vector<Mesh*> getAllMeshes();
 
@@ -42,7 +45,7 @@ public:
 	void load(std::string name, Shader* shader);
 
 	Model();
-	Model(LModel* model, Shader* shader);
+	Model(LModel* model, Shader* shader, AssetManager* manager);
+	Model(std::string name, Shader* shader, AssetManager* manager);
 	~Model();
 };
-

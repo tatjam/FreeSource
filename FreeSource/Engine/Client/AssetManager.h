@@ -1,20 +1,24 @@
 #pragma once
 
-#include "Rendering/Model.h"
-
 
 #include "SOIL.h"
 
 #include <map>
 
-#define AssetManagerI AssetManager::getInstance()
-
 using std::map;
+
+#include "Rendering/TextureData.h"
+#include "Rendering/Model.h"
 
 class LModel;
 
-#include "Rendering/TextureData.h"
 
+/*
+#ifndef LOGURU_INCLUDED
+#define LOGURU_INCLUDED
+#include "../Util/loguru.hpp"
+#endif
+*/
 
 class TextureData;
 /*
@@ -27,49 +31,43 @@ class AssetManager
 {
 public:
 
-
-
-	/*static std::string getColorString(Color color)
-	{
-		std::stringstream ss = std::stringstream();
-		ss << "R{" + color.r << "}, G{" << color.g << "}, B{" << color.b << ", A{" << color.a << "}";
-		return ss.str();
-	}
-	*/
-	
-	static AssetManager& getInstance()
-	{
-		static AssetManager    instance; // Guaranteed to be destroyed.
-							  // Instantiated on first use.
-		return instance;
-	}
-
 	// For now only does textures
 
-	map<string, GLuint> textures;
-	map<string, TextureData*> texturesData;
-	map<string, LModel*> models;
-	map<string, Shader*> shaders;
+	map<std::string, GLuint> textures;
+	map<std::string, TextureData*> texturesData;
+	map<std::string, LModel*> models;
+	map<std::string, Shader*> shaders;
 
-	GLuint loadTexture(string path, int channels = SOIL_LOAD_RGB, bool storeData = true);
-	GLuint loadTexture(string path, string name, int channels = SOIL_LOAD_RGB, bool storeData = true);
-	void loadShader(string vertexPath, string fragmentPath);
-	void loadModel(string path, string name);
+	GLuint loadTexture(std::string path, int channels = SOIL_LOAD_RGB,
+		bool storeData = true, bool force = false);
+	GLuint loadTexture(std::string path, std::string name, int channels = SOIL_LOAD_RGB, 
+		bool storeData = true, bool force = false);
+	GLuint loadTexture(unsigned char* data, int data_size, std::string name, int channels = SOIL_LOAD_RGB, 
+		bool storeData = true, bool force = false);
 
-	LModel* getModel(string name);
-	Shader* getShader(string name);
-	TextureData* getTexture(string name);
+	// Reuploads texture into GL after being modified.
+	// Faster and more limited version
+	void updateTextureFast(std::string name);
 
-private:
+	// Reuploads texture into GL after being modified.
+	// Slower and less limited version
+	void updateTextureSlow(std::string name);
+
+
+	void loadShader(std::string vertexPath, std::string fragmentPath);
+	void loadModel(std::string path, std::string name);
+
+	LModel* getModel(std::string name);
+	Shader* getShader(std::string name);
+	TextureData* getTexture(std::string name);
+
 	AssetManager()
 	{
 
 	}
 	~AssetManager()
 	{
-
+		// Unload stuff (TODO)
 	}
-	AssetManager(AssetManager const&);              // Don't Implement
-	void operator=(AssetManager const&);			// Don't implement
 };
 

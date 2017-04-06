@@ -2,15 +2,16 @@
 
 
 
-LModel::LModel(const GLchar* path, unsigned int pFlags)
+LModel::LModel(const GLchar* path,AssetManager* as, unsigned int pFlags)
 {
+	assetManager = as;
 	loadModel(std::string(path), pFlags);
 }
 
 void LModel::drawShadow(Shader shader, glm::mat4 light, glm::mat4 transform)
 {
 	shader.use();
-	for (int i = 0; i < meshes.size(); i++)
+	for (int i = 0; i < (int)meshes.size(); i++)
 	{
 		meshes[i].drawShadow(shader, light, transform);
 	}
@@ -19,39 +20,40 @@ void LModel::drawShadow(Shader shader, glm::mat4 light, glm::mat4 transform)
 void LModel::draw(Shader shader, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID)
 {
 	shader.use();
-	for (int i = 0; i < meshes.size(); i++)
+	for (int i = 0; i < (int)meshes.size(); i++)
 	{
 		meshes[i].draw(shader, lScene, transform, world, persp, shadowMapID);
 	}
 }
 
-vector<Texture> LModel::loadMaterialTextures(aiMaterial* mat, aiTextureType type, string typeName)
+vector<Texture> LModel::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName)
 {
 	vector<Texture> textures;
-	for (GLuint i = 0; i < mat->GetTextureCount(type); i++)
+	for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
 	{
 		aiString str;
 		mat->GetTexture(type, i, &str);
 		Texture texture;
-		texture.id = AssetManager::getInstance().loadTexture(directory + "/" + str.C_Str());
+		texture.id = assetManager->loadTexture(directory + "/" + str.C_Str());
 		texture.type = typeName;
 		textures.push_back(texture);
-
-		std::cout << "Loaded new texture with id: " << texture.id << std::endl;
 	}
 	return textures;
 }
 
-void LModel::loadModel(string path, unsigned int pFlags)
+void LModel::loadModel(std::string path, unsigned int pFlags)
 {
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile(path, pFlags);
 
+
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		std::cout << "[LOADING MODEL ERROR] Assimp could not load model" << std::endl;
+		LOG_F(ERROR, "Error loading model! (Path: %s)", path.c_str());
 		return;
 	}
+
+	aiApplyPostProcessing(scene, pFlags);
 
 	this->directory = path.substr(0, path.find_last_of('/'));
 
@@ -75,11 +77,19 @@ void LModel::processNode(aiNode* node, const aiScene* scene)
 
 Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 {
+
+	Mesh m = Mesh();
 	vector<Vertex> vvector;
 	vector<GLuint> ivector;
 	vector<Texture> tvector;
 
-	for (int i = 0; i < mesh->mNumVertices; i++)
+	if (mesh->HasTangentsAndBitangents() == false)
+	{
+		// Should not happen unless model has no UVs
+		LOG_F(ERROR, "Could not generate tangents!");
+	}
+
+	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 	{
 		Vertex vertex;
 
@@ -93,6 +103,25 @@ Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 		vv.y = mesh->mNormals[i].y;
 		vv.z = mesh->mNormals[i].z;
 		vertex.normal = vv;
+
+		if (mesh->mTangents == NULL)
+		{
+			vertex.tangent = glm::vec3();
+			vertex.bittangent = glm::vec3();
+		}
+		else
+		{
+
+			vv.x = mesh->mTangents[i].x;
+			vv.y = mesh->mTangents[i].y;
+			vv.z = mesh->mTangents[i].z;
+			vertex.tangent = vv;
+
+			vv.x = mesh->mBitangents[i].x;
+			vv.y = mesh->mBitangents[i].y;
+			vv.z = mesh->mBitangents[i].z;
+			vertex.bittangent = vv;
+		}
 
 		if (mesh->mTextureCoords[0])
 		{
@@ -123,6 +152,7 @@ Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 
 	if (mesh->mMaterialIndex >= 0)
 	{
+
 		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 		vector<Texture> diffuses = loadMaterialTextures(material,
 			aiTextureType_DIFFUSE, "diffuse");
@@ -130,32 +160,77 @@ Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 			aiTextureType_SPECULAR, "specular");
 		vector<Texture> emissives = loadMaterialTextures(material,
 			aiTextureType_EMISSIVE, "emissive");
+		vector<Texture> normals = loadMaterialTextures(material,
+			aiTextureType_HEIGHT, "normal");
+
+		// NOTE THAT ASSIMP USES HEIGHT AS NORMAL!!!
 
 		Texture diffuse;
 		Texture specular;
 		Texture emissive;
+		Texture normal;
 
 		if (diffuses.size() > 0)
 		{
 			diffuse = diffuses[0];
+			tvector.push_back(diffuse);
 		}
 		if (speculars.size() > 0)
 		{
 			specular = speculars[0];
+			tvector.push_back(specular);
 		}
 		if (emissives.size() > 0)
 		{
 			emissive = emissives[0];
+			tvector.push_back(emissive);
+		};
+		if (normals.size() > 0)
+		{
+			normal = normals[0];
+			tvector.push_back(normal);
 		}
 
 
-		tvector.push_back(diffuse);
-		tvector.push_back(specular);
-		tvector.push_back(emissive);
+	}
+
+	m = Mesh(vvector, ivector, tvector, name.C_Str());
+
+	// Find material values
+	if (mesh->mMaterialIndex >= 0)
+	{
+		LOG_F(INFO, "Loading material properties");
+
+		aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+		aiColor3D colorBuff;
+		if (material->Get(AI_MATKEY_COLOR_DIFFUSE, colorBuff) != AI_SUCCESS)
+		{
+			LOG_F(ERROR, "Could not load Difusse property");
+		}
+		m.materialData.diffuseColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+		if (material->Get(AI_MATKEY_COLOR_SPECULAR, colorBuff) != AI_SUCCESS)
+		{
+			LOG_F(ERROR, "Could not load Specular property");
+		}
+		m.materialData.specularColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+		if (material->Get(AI_MATKEY_COLOR_EMISSIVE, colorBuff) != AI_SUCCESS)
+		{
+			LOG_F(ERROR, "Could not load Emissive property");
+		}
+
+		float fBuff;
+		if (material->Get(AI_MATKEY_SHININESS, fBuff) != AI_SUCCESS)
+		{
+			LOG_F(ERROR, "Could not load Shininess property");
+		}
+
+		m.materialData.emissionColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+		m.materialData.shininess = fBuff;
+		m.materialData.emissionPower = 1.0f;
 
 	}
 
-	return Mesh(vvector, ivector, tvector, name.C_Str());
+	return m;
 
 }
 
