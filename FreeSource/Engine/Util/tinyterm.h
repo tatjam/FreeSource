@@ -113,6 +113,7 @@ void term_free_image(termImage* img);
 void term_free_bimage(termBitImage* img);
 // The termScreen will keep existing but all the data will be removed
 void term_free_screen(termScreen* scr);
+
 #endif
 
 #ifdef TERM_INCLUDE_DEFINITION
