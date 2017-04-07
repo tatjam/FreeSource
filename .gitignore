@@ -7,6 +7,11 @@
 *.userosscache
 *.sln.docstates
 
+// Also remove asset files (This is the engine repo not a game!)
+*.obj
+*.mtl
+*.png
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
