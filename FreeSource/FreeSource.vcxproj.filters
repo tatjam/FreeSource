@@ -25,6 +25,8 @@
     <None Include="Resource\Shader\test_shader.frag" />
     <None Include="Resource\Shader\framebufferold.frag" />
     <None Include="Resource\Shader\framebuffer.frag" />
+    <None Include="Resource\Shader\basic_skybox.vert" />
+    <None Include="Resource\Shader\basic_skybox.frag" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Engine\Client\AssetManager.cpp">
@@ -98,5 +100,11 @@
     <ClInclude Include="Engine\Util\tinyterm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Engine\Client\FPSCamera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Resource\credits.txt" />
   </ItemGroup>
 </Project>

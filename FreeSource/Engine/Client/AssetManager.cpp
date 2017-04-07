@@ -170,6 +170,95 @@ GLuint AssetManager::loadTexture(std::string path, std::string name, int channel
 	}
 }
 
+TextureData* AssetManager::loadTextureData(std::string path, std::string name, int channels, bool force)
+{
+
+	LOG_F(INFO, "Loading texture from path:'%s' with name '%s' (DATA ONLY)", path.c_str(), name.c_str());
+	int width, height, channelsS;
+	unsigned char* image = SOIL_load_image(path.c_str(), &width, &height, &channelsS, channels);
+
+	if (image == 0)
+	{
+		LOG_F(ERROR, "Could not load texture!");
+		return NULL;
+	}
+
+	TextureData* d = new TextureData();
+	d->data = image;
+	d->size = width * height;
+	d->sizePerPixel = channels;
+	d->width = width;
+	d->height = height;
+	d->glId = -1;
+	texturesData[name] = d;
+
+	return texturesData[name];
+}
+
+GLuint AssetManager::createCubemap(TextureData** data, std::string name, bool correct, bool force)
+{
+	LOG_F(INFO, "Creating cubemap with name: %s", name.c_str());
+	if (cubemaps.count(name) && !force)
+	{
+		return cubemaps[name];
+	}
+	else
+	{
+		GLuint tId;
+		glGenTextures(1, &tId);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, tId);
+
+		for (GLuint i = 0; i < 6; i++)
+		{
+			int face = 0;
+			if (correct)
+			{
+				if (i == 0)
+				{
+					face = GL_TEXTURE_CUBE_MAP_POSITIVE_Z;
+				}
+				else if (i == 1)
+				{
+					face = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
+				}
+				else if (i == 2)
+				{
+					face = GL_TEXTURE_CUBE_MAP_POSITIVE_Y;
+				}
+				else if (i == 3)
+				{
+					face = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
+				}
+				else if (i == 4)
+				{
+					face = GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
+				}
+				else
+				{
+					face = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+				}
+			}
+			else
+			{ 
+				face = GL_TEXTURE_CUBE_MAP_POSITIVE_X + i;
+			}
+			glTexImage2D(face, 0, GL_SRGB, data[i]->width, data[i]->height, 
+				0, GL_RGB, GL_UNSIGNED_BYTE, data[i]->data);
+		}
+
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+		cubemaps[name] = tId;
+		return tId;
+	}
+}
+
 void AssetManager::loadModel(std::string path, std::string name)
 {
 	if (models.count(name))

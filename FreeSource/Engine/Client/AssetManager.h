@@ -38,12 +38,20 @@ public:
 	map<std::string, LModel*> models;
 	map<std::string, Shader*> shaders;
 
+	map<std::string, GLuint> cubemaps;
+
 	GLuint loadTexture(std::string path, int channels = SOIL_LOAD_RGB,
 		bool storeData = true, bool force = false);
 	GLuint loadTexture(std::string path, std::string name, int channels = SOIL_LOAD_RGB, 
 		bool storeData = true, bool force = false);
 	GLuint loadTexture(unsigned char* data, int data_size, std::string name, int channels = SOIL_LOAD_RGB, 
 		bool storeData = true, bool force = false);
+
+	TextureData* loadTextureData(std::string path, std::string name, int channels = SOIL_LOAD_RGB, bool force = false);
+
+	// Creates a cubemap from 6 faces
+	// +X, -X, +Y, -Y, +Z, -Z
+	GLuint createCubemap(TextureData** faces, std::string name, bool correct = true, bool force = false);
 
 	// Reuploads texture into GL after being modified.
 	// Faster and more limited version

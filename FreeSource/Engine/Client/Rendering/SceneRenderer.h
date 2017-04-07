@@ -56,12 +56,17 @@ public:
 
 	void draw(int WIDTH, int HEIGHT, float dt);
 
-	// Debug drawing routine. Draws a line
+	// Debug drawing routine. Draws a line. EXTREMELY SLOW
 	void drawDebugLine(glm::vec3 start, glm::vec3 end, glm::vec3 color, float duration);
 
-	// Debug drawing routine. Draws a pointed arrow
+	// Debug drawing routine. Draws a pointed arrow. EXTREMELY SLOW
 	void drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 color, float duration);
 
+	// Debug drawing routine. Draws a pointed arrow with 2 colors. EXTREMELY SLOW
+	void drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 color, glm::vec3 headColor, float duration);
+
+	// Debug drawing routine. Draws a point. EXTREMELY SLOW
+	void drawDebugPoint(glm::vec3 pos, glm::vec3 color, float duration);
 
 	SceneRenderer();
 	~SceneRenderer();
@@ -70,6 +75,8 @@ public:
 
 	glm::vec3 dLightPos = glm::vec3(-2.0f, 4.0f, -1.0f);
 
+	GLuint skybox = 0;
+
 private:
 
 	GLuint framebuffer;
@@ -77,6 +84,7 @@ private:
 	GLuint rbo;
 	GLuint quadVAO, quadVBO;
 
+	GLuint skyVAO, skyVBO;
 
 	GLuint depthMapFBO;
 
@@ -86,6 +94,7 @@ private:
 	Shader frameShader;
 	Shader shadowShader;
 	Shader debugShader;
+	Shader skyShader;
 
 	int doEffect = 1;
 

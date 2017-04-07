@@ -17,12 +17,13 @@ void LModel::drawShadow(Shader shader, glm::mat4 light, glm::mat4 transform)
 	}
 }
 
-void LModel::draw(Shader shader, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID)
+void LModel::draw(Shader shader, LightScene lScene, glm::mat4 transform, glm::mat4 world, 
+	glm::mat4 persp, GLuint shadowMapID, GLuint sky, glm::vec3 cPos)
 {
 	shader.use();
 	for (int i = 0; i < (int)meshes.size(); i++)
 	{
-		meshes[i].draw(shader, lScene, transform, world, persp, shadowMapID);
+		meshes[i].draw(shader, lScene, transform, world, persp, shadowMapID, sky, cPos);
 	}
 }
 
@@ -217,6 +218,14 @@ Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 		{
 			LOG_F(ERROR, "Could not load Emissive property");
 		}
+		m.materialData.emissionColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+
+		if (material->Get(AI_MATKEY_COLOR_AMBIENT, colorBuff) != AI_SUCCESS)
+		{
+			LOG_F(ERROR, "Could not load Ambient property");
+		}
+		m.materialData.reflectiveColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+
 
 		float fBuff;
 		if (material->Get(AI_MATKEY_SHININESS, fBuff) != AI_SUCCESS)
@@ -224,7 +233,7 @@ Mesh LModel::processMesh(aiMesh* mesh, const aiScene* scene, aiString name)
 			LOG_F(ERROR, "Could not load Shininess property");
 		}
 
-		m.materialData.emissionColor = glm::vec3(colorBuff.r, colorBuff.g, colorBuff.b);
+
 		m.materialData.shininess = fBuff;
 		m.materialData.emissionPower = 1.0f;
 

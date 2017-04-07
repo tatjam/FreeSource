@@ -17,7 +17,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
+#include <glm/gtx/rotate_vector.hpp>
 
 #ifndef LOGURU_INCLUDED
 #define LOGURU_INCLUDED
@@ -39,6 +39,8 @@
 
 #define TERM_INCLUDE_DEFINITION
 #include "Engine/Util/tinyterm.h"
+
+#include "Engine/Client/FPSCamera.h"
 
 // Window dimensions
 const GLuint WIDTH = 800, HEIGHT = 600;
@@ -99,7 +101,7 @@ int main(int argc, char *argv[])
 
 	AssetManager assetManager = AssetManager();
 
-	assetManager.loadModel("Resource/cubetest.obj", "duck");
+	assetManager.loadModel("Resource/lunar_lander.obj", "duck");
 	assetManager.loadModel("Resource/medieval_house.obj", "mapDemo");
 
 	// Build and compile our shader program
@@ -127,6 +129,7 @@ int main(int argc, char *argv[])
 
 	testModel.transform.scaling = glm::vec3(1.3f, 1.3f, 1.3f);
 	testModel.transform.setEulerAngles(0.0f, 0.0f, 0.0f);
+	testModel.transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
 	testModel.transform.buildMatrix();
 
 	houseModel.transform.scaling = glm::vec3(0.8f, 0.8f, 0.8f);
@@ -136,7 +139,7 @@ int main(int argc, char *argv[])
 
 	renderer.lScene.dirLightEnabled = true;
 	renderer.lScene.dirLight.direction = glm::vec3(1, -0.5f, 1);
-	renderer.lScene.dirLight.diffuse = glm::vec3(1.0f, 1.0f, 1.0f);
+	renderer.lScene.dirLight.diffuse = glm::vec3(4.0f, 2.3f, 2.3f);
 	renderer.lScene.dirLight.ambient = glm::vec3(0.1f, 0.1f, 0.1f);
 	renderer.lScene.dirLight.specular = glm::vec3(0.5f, 0.5f, 0.5f);
 
@@ -162,19 +165,41 @@ int main(int argc, char *argv[])
 	renderer.camera.exposure = 1.5f;
 
 
-	assetManager.loadTexture("Resource/test_font.bmp", 3, true, false);
+	assetManager.loadTexture("Resource/detail_font.bmp", "font", 3, true, false);
 
 	LOG_F(INFO, "PRE_CREATE_STUFF");
 
 	termScreen scr = term_create_screen(20, 20);
-	termFont font = term_load_font((char*)assetManager.getTexture("Resource/test_font.bmp")->data, 
-		assetManager.getTexture("Resource/test_font.bmp")->width * 
-		assetManager.getTexture("Resource/test_font.bmp")->height * 
-		assetManager.getTexture("Resource/test_font.bmp")->sizePerPixel, 
-		assetManager.getTexture("Resource/test_font.bmp")->width, 8, 8, 0);
+	termFont font = term_load_font((char*)assetManager.getTexture("font")->data, 
+		assetManager.getTexture("font")->width * 
+		assetManager.getTexture("font")->height * 
+		assetManager.getTexture("font")->sizePerPixel, 
+		assetManager.getTexture("font")->width, 32, 32, 0);
 	termImage img = term_create_image(20 * font.width, 20 * font.height);
 
 	LOG_F(INFO, "POST_CREATE_STUFF");
+
+	FPSCamera camera = FPSCamera();
+
+	bool d_enable = false;
+
+	float cameraSpeed = 1.0f;
+
+	bool inside_camera = false;
+
+	std::vector<TextureData*> cubeSides;
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_rt.tga", "arch3_+x"));
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_lf.tga", "arch3_-x"));
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_up.tga", "arch3_+y"));
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_dn.tga", "arch3_-y"));
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_bk.tga", "arch3_+z"));
+	cubeSides.push_back(assetManager.loadTextureData("Resource/sky_extra/red_ft.tga", "arch3_-z"));
+
+	GLuint sky = assetManager.createCubemap(cubeSides.data(), "sky");
+
+	renderer.skybox = sky;
+
+	float edgeSmooth = 0.0f;
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -193,30 +218,125 @@ int main(int argc, char *argv[])
 			scr.chars[i].bg = (tan(t * i / 100.0f) + 1.0f) * 128.0f;
 		}
 
-		term_render_image(&scr, &img, &font, 1);
+		if (glfwGetKey(window, GLFW_KEY_N) == GLFW_PRESS)
+		{
+			edgeSmooth -= 1.0f * dt;
+			LOG_F(INFO, "EDGE SMOOTH: %f", edgeSmooth);
+		}
+		if (glfwGetKey(window, GLFW_KEY_M) == GLFW_PRESS)
+		{
+			edgeSmooth += 1.0f * dt;
+			LOG_F(INFO, "EDGE SMOOTH: %f", edgeSmooth);
+		}
 
-		term_upload_gl_image(&img, assetManager.textures["Resource/AluminumOxy.png"]);
+		for (int i = 0; i < assetManager.getModel("mapDemo")->meshes.size(); i++)
+		{
+			assetManager.getModel("mapDemo")->meshes[i].materialData.edgeSmooth = edgeSmooth;
+			//LOG_F(INFO, "EDGE_SMOOTH: %f", sin(t / 5) * 5.0f);
+		}
 
-		glm::vec3 endPoint;
+		/*
+		if (frameNum % 20 == 0)
+		{
+			term_render_image(&scr, &img, &font, 1);
 
-		endPoint = glm::vec3(sin(t * 2) * radius / 2, 2.0f, cos(t * 2) * radius / 2);
+			term_upload_gl_image(&img, assetManager.textures["Resource/AluminumOxy.png"]);
+		}
+		*/
 
-		renderer.drawDebugArrow(glm::vec3(0, 0, 0), endPoint, glm::vec3(1, 0, 0), 0.0f);
-		renderer.drawDebugArrow(glm::vec3(0, 0, 0), glm::rotateX(endPoint, sin(t * 2)), glm::vec3(0, 0, 1), 0.0f);
-		renderer.drawDebugLine(endPoint, glm::rotateX(endPoint, sin(t * 2)), glm::vec3(0, 1, 0), 0.0f);
+
+
 
 		// Calculate dt of current frame
 		double currentFrame = glfwGetTime();
 		dt = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		renderer.camera.position = glm::vec3(sin(t / 2) * radius, 3.0f, cos(t / 2) * radius);
-		renderer.camera.target = glm::vec3(-2.0f, 0.0f, 0.0f);
 
-		renderer.lScene.dirLight.direction = glm::vec3(sin(t), cos(t), sin(t) * cos(t));
+		if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		{
+			camera.azimuth += 90.0f * dt;
+		}
+		if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		{
+			camera.azimuth -= 90.0f * dt;
+		}
 
-		testModel.transform.rotateEuler(0, 45.0f * dt, 5.0f * dt);
-		testModel.transform.buildMatrix();
+		if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		{
+			camera.polar += 90.0f * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		{
+			camera.polar -= 90.0f * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		{
+			camera.pos += camera.getForwardVector() * cameraSpeed * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		{
+			camera.pos += -camera.getForwardVector() * cameraSpeed * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		{
+			camera.pos += camera.getRightVector() * cameraSpeed * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		{
+			camera.pos += -camera.getRightVector() * cameraSpeed * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+		{
+			cameraSpeed += 1.0f * dt;
+		}
+		if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS)
+		{
+			cameraSpeed -= 1.0f * dt;
+		}
+
+		if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+		{
+			inside_camera = false;
+			d_enable = true;
+		}
+		if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
+		{
+			inside_camera = true;
+			d_enable = false;
+		}
+
+
+		if (d_enable)
+		{
+			renderer.drawDebugArrow(camera.pos, camera.getLookAtTarget(), glm::vec3(1, 0.3f, 0.3f), glm::vec3(1, 0, 0), 0);
+			renderer.drawDebugArrow(camera.pos, camera.pos + camera.getRightVector(), glm::vec3(1, 0.3f, 0.3f), glm::vec3(0, 1, 0), 0);
+			renderer.drawDebugArrow(camera.pos, camera.pos + camera.getUpVector(), glm::vec3(1, 0.3f, 0.3f), glm::vec3(0, 0, 1), 0);
+
+			renderer.drawDebugPoint(camera.getLookAtTarget(), glm::vec3(1, 1, 1), 1.0f);
+		}
+
+		if (inside_camera)
+		{
+			renderer.camera.position = camera.pos;
+			renderer.camera.target = camera.getLookAtTarget();
+		}
+		else
+		{
+			renderer.camera.position = glm::vec3(sin(t / 2) * radius, 3.0f, cos(t / 2) * radius);
+			renderer.camera.target = glm::vec3(-2.0f, 0.0f, 0.0f);
+		}
+
+		//renderer.lScene.dirLight.direction = glm::vec3(sin(t), cos(t), sin(t) * cos(t));
+
+		/*testModel.transform.rotateEuler(0, 45.0f * dt, 5.0f * dt);
+		testModel.transform.buildMatrix();*/
 
 
 		for (int i = 0; i < (int)meshes.size(); i++)
@@ -231,6 +351,11 @@ int main(int argc, char *argv[])
 
 		// Swap the screen buffers
 		glfwSwapBuffers(window);
+
+		if (frameNum % 10 == 0)
+		{
+			LOG_F(INFO, "FPS: %f", 1.0f / dt);
+		}
 
 		t += dt;
 		frameNum++;

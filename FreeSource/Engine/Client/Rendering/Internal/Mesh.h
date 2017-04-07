@@ -61,6 +61,10 @@ struct MaterialData
 	float emissionPower = 1.0f;
 	float shininess = 32.0f;
 
+	float edgeSmooth = 0.0f;
+
+	glm::vec3 reflectiveColor;
+
 	glm::vec2 diffuseOffset;
 	glm::vec2 specularOffset;
 	glm::vec2 emissiveOffset;
@@ -85,7 +89,7 @@ public:
 
 	void build(vector<Vertex> v, vector<GLuint> i, vector<Texture> t);
 
-	void draw(Shader shader, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID);
+	void draw(Shader shader, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID, GLuint sky, glm::vec3 cameraPos);
 	void drawShadow(Shader shader, glm::mat4 light, glm::mat4 transform);
 
 	Mesh(vector<Vertex> v, vector<GLuint> i, vector<Texture> t, std::string name);

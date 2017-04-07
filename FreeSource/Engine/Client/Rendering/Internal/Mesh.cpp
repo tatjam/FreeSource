@@ -18,7 +18,7 @@ void Mesh::drawShadow(Shader s, glm::mat4 light, glm::mat4 transform)
 	glBindVertexArray(0);
 }
 
-void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapId)
+void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapId, GLuint sky, glm::vec3 cameraPos)
 {
 
 	bool diffuseLoaded = false;
@@ -30,6 +30,8 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	glUniform1i(glGetUniformLocation(s.programID, "shadowMap"), 0);
 	glBindTexture(GL_TEXTURE_2D, shadowMapId);
 	glActiveTexture(0);
+
+	int loadedTextures = 0;
 
 	for (int i = 0; i < (int)textures.size(); i++)
 	{
@@ -56,12 +58,32 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 			glUniform1i(glGetUniformLocation(s.programID, "material.normalMap"), i + 1);
 		}
 
+
+
 		glBindTexture(GL_TEXTURE_2D, textures[i].id);
+		loadedTextures++;
 		//if(diffuseLoaded || specularLoaded || emissionLoaded)
 
 
 	}
 
+
+	if (sky != 0)
+	{
+		glActiveTexture(GL_TEXTURE1 + loadedTextures + 1);
+		glUniform1i(glGetUniformLocation(s.programID, "skyboxEnabled"), 1);
+		glUniform1i(glGetUniformLocation(s.programID, "skybox"), loadedTextures + 2);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, sky);
+	}
+	else
+	{
+		glUniform1i(glGetUniformLocation(s.programID, "skyboxEnabled"), 0);
+	}
+
+	glUniform3f(glGetUniformLocation(s.programID, "material.reflective"), materialData.reflectiveColor.x,
+		materialData.reflectiveColor.y, materialData.reflectiveColor.z);
+
+	glUniform1f(glGetUniformLocation(s.programID, "edgeSmooth"), materialData.edgeSmooth);
 
 	glActiveTexture(0);
 
@@ -116,6 +138,7 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	}
 
 
+
 	glUniform1f(glGetUniformLocation(s.programID, "material.shininess"), materialData.shininess);
 
 	glUniform1f(glGetUniformLocation(s.programID, "material.emissiveForce"), materialData.emissionPower);
@@ -131,6 +154,8 @@ void Mesh::draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 worl
 	glUniform2f(glGetUniformLocation(s.programID, "material.emissiveOffset"),
 		materialData.emissiveOffset.x,
 		materialData.emissiveOffset.y);
+
+	glUniform3f(glGetUniformLocation(s.programID, "cameraPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
 	for (int i = 0; i < lScene.pointLightCount; i++)
 	{

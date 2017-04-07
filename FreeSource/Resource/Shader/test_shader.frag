@@ -18,6 +18,11 @@ struct Material {
 
     float shininess;
 
+	sampler2D reflectiveMap;
+	int reflectiveMapEnabled;
+
+	vec3 reflective;
+
 	vec2 diffuseOffset;
 	vec2 specularOffset;
 	vec2 emissiveOffset;
@@ -26,6 +31,9 @@ struct Material {
 
 uniform sampler2D shadowMap;
 
+
+uniform int skyboxEnabled;
+uniform samplerCube skybox;
 
 struct DirLight {
     vec3 direction;
@@ -52,7 +60,9 @@ struct PointLight {
 uniform int pointLightCount;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 
+uniform float edgeSmooth;
 
+uniform vec3 cameraPos;
 
 in vec3 FragPos;  
 in vec3 Normal;  
@@ -73,6 +83,10 @@ float CalculateShadow(vec4 fragPosLightSpace, float bias);
 void main()
 {
 
+	vec3 I = normalize(FragPos - cameraPos);
+    vec3 R = reflect(I, normalize(Normal));
+
+
     // Diffuse 
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
@@ -80,6 +94,7 @@ void main()
 	vec3 result = vec3(0, 0, 0);
 
 	vec3 ambient = vec3(0, 0, 0);
+
 
 	if(material.normalEnabled == 1)
 	{
@@ -90,6 +105,7 @@ void main()
 
 		norm = normalTex;
 	}
+
 
 	float shadow = 1.0f;
 
@@ -118,7 +134,23 @@ void main()
 
 
 	result *= shadow;
+
+
+	/* Reflection of skybox */
+	if(skyboxEnabled == 1)
+	{
+		if(material.reflectiveMapEnabled == 1)
+		{
+		
+		}
+		else
+		{
+			result += vec3(texture(skybox, R)) * material.reflective;
+		}
+	}
+	
 	result += ambient;
+
 	if(material.emissiveForce > 0 && material.emissiveEnabled == 1)
 	{
 		result += vec3(texture(material.emissive, TexCoords + material.emissiveOffset) * material.emissiveForce);
@@ -129,7 +161,8 @@ void main()
 		result += vec3(material.emissiveValue) * vec3(material.emissiveForce);
 	}
 
-	//result = norm;
+
+	//result = E;
 
     color = vec4(result, 1.0f);
 } 

@@ -3,6 +3,8 @@
 
 void SceneRenderer::draw(int WIDTH, int HEIGHT, float dt)
 {
+
+
 	dLightPos = glm::vec3(0.0f, 0.0f, 0.0f) - lScene.dirLight.direction * 20.0f;
 	glm::mat4 lightProj = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, shadowNPlane, shadowFPlane);
 	glm::mat4 lightView = glm::lookAt(dLightPos, dLightPos + lScene.dirLight.direction, glm::vec3(0, 1, 0));
@@ -21,7 +23,7 @@ void SceneRenderer::draw(int WIDTH, int HEIGHT, float dt)
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 	glViewport(0, 0, shadowWidth, shadowHeight);
 	glEnable(GL_DEPTH_TEST);
-
+	glDepthFunc(GL_LESS);
 
 	glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -30,9 +32,13 @@ void SceneRenderer::draw(int WIDTH, int HEIGHT, float dt)
 		drawables[i]->drawShadow(lightMat, &shadowShader);
 	}
 
+
+
 	// Draw now to our framebuffer
 	glViewport(0, 0, WIDTH, HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+
 	//glDisable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
@@ -42,9 +48,12 @@ void SceneRenderer::draw(int WIDTH, int HEIGHT, float dt)
 	view = glm::lookAt(camera.position, camera.target, camera.up);
 	proj = glm::perspective(glm::radians(camera.fov), (GLfloat)WIDTH / (GLfloat)HEIGHT, camera.close, camera.far);
 
+
+
+	// TODO: WE COULD REALLY LOAD MATRICES HERE INSTEAD OF IN EVERY MESH
 	for (int i = 0; i < (int)drawables.size(); i++)
 	{
-		drawables[i]->draw(view, proj, lScene, depthMap);
+		drawables[i]->draw(view, proj, lScene, depthMap, skybox, camera.position);
 	}
 
 
@@ -81,6 +90,26 @@ void SceneRenderer::draw(int WIDTH, int HEIGHT, float dt)
 		}
 	}
 
+
+	glm::mat4 skyView = glm::mat4(glm::mat3(view));
+
+	//Draw skybox
+	if (skybox != 0)
+	{
+		glDepthFunc(GL_LEQUAL);
+		skyShader.use();
+
+		//glUniformMatrix4fv(glGetUniformLocation(skyShader.programID, "model"), 1, GL_FALSE, glm::value_ptr(skyOffset));
+		glUniformMatrix4fv(glGetUniformLocation(skyShader.programID, "view"), 1, GL_FALSE, glm::value_ptr(skyView));
+		glUniformMatrix4fv(glGetUniformLocation(skyShader.programID, "projection"), 1, GL_FALSE, glm::value_ptr(proj));
+
+		glBindVertexArray(skyVAO);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		glBindVertexArray(0);
+		glDepthFunc(GL_LESS);
+	}
 
 	// Draw framebuffer quad
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
@@ -142,7 +171,42 @@ void SceneRenderer::drawDebugLine(glm::vec3 start, glm::vec3 end, glm::vec3 colo
 	debug.push_back(n);
 }
 
+void SceneRenderer::drawDebugPoint(glm::vec3 pos, glm::vec3 color, float duration)
+{
+	DebugObject point = DebugObject();
+	point.data = (GLfloat*)malloc(6 * sizeof(GLfloat));
+	point.data_size = 6;
+	point.data[0] = pos.x; point.data[1] = pos.y; point.data[2] = pos.z;
+	point.data[3] = color.x; point.data[4] = color.y; point.data[5] = color.z;
+
+	glGenVertexArrays(1, &point.VAO);
+	glGenBuffers(1, &point.VBO);
+	glBindVertexArray(point.VAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, point.VBO);
+	glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(GLfloat), point.data, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0); // Position
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat))); // Color
+	glEnableVertexAttribArray(1);
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	glBindVertexArray(0);
+
+	point.duration = duration;
+	point.vertexCount = 1;
+	point.type = GL_POINTS;
+	debug.push_back(point);
+}
+
 void SceneRenderer::drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 color, float duration)
+{
+	drawDebugArrow(start, end, color, color, duration);
+}
+
+void SceneRenderer::drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 color, glm::vec3 headColor, float duration)
 {
 	// Line
 	DebugObject line = DebugObject();
@@ -206,9 +270,9 @@ void SceneRenderer::drawDebugArrow(glm::vec3 start, glm::vec3 end, glm::vec3 col
 		}
 		
 		head.data[i * 12] = st.x; head.data[i * 12 + 1] = st.y; head.data[i * 12 + 2] = st.z;
-		head.data[i * 12 + 3] = color.x; head.data[i * 12 + 4] = color.y; head.data[i * 12 + 5] = color.z;
+		head.data[i * 12 + 3] = headColor.x; head.data[i * 12 + 4] = headColor.y; head.data[i * 12 + 5] = headColor.z;
 		head.data[i * 12 + 6] = end.x; head.data[i * 12 + 7] = end.y; head.data[i * 12 + 8] = end.z;
-		head.data[i * 12 + 9] = color.x; head.data[i * 12 + 10] = color.y; head.data[i * 12 + 11] = color.z;
+		head.data[i * 12 + 9] = headColor.x; head.data[i * 12 + 10] = headColor.y; head.data[i * 12 + 11] = headColor.z;
 
 	}
 
@@ -324,6 +388,62 @@ void SceneRenderer::start(int WIDTH, int HEIGHT)
 	frameShader = Shader("Resource/Shader/framebuffer.vert", "Resource/Shader/framebuffer.frag");
 	shadowShader = Shader("Resource/Shader/shadow_shader.vert", "Resource/Shader/shadow_shader.frag");
 	debugShader = Shader("Resource/Shader/basic_unlit.vert", "Resource/Shader/basic_unlit.frag");
+	skyShader = Shader("Resource/Shader/basic_skybox.vert", "Resource/Shader/basic_skybox.frag");
+
+	// Create skybox data
+	GLfloat skyboxVertices[] = {
+		// Positions          
+		-1.0f,  1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		1.0f, -1.0f, -1.0f,
+		1.0f, -1.0f, -1.0f,
+		1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		1.0f, -1.0f, -1.0f,
+		1.0f, -1.0f,  1.0f,
+		1.0f,  1.0f,  1.0f,
+		1.0f,  1.0f,  1.0f,
+		1.0f,  1.0f, -1.0f,
+		1.0f, -1.0f, -1.0f,
+
+		-1.0f, -1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		1.0f,  1.0f,  1.0f,
+		1.0f,  1.0f,  1.0f,
+		1.0f, -1.0f,  1.0f,
+		-1.0f, -1.0f,  1.0f,
+
+		-1.0f,  1.0f, -1.0f,
+		1.0f,  1.0f, -1.0f,
+		1.0f,  1.0f,  1.0f,
+		1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f,  1.0f,
+		-1.0f,  1.0f, -1.0f,
+
+		-1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		1.0f, -1.0f, -1.0f,
+		1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f,  1.0f,
+		1.0f, -1.0f,  1.0f
+	};
+
+	glGenVertexArrays(1, &skyVAO);
+	glGenBuffers(1, &skyVBO);
+	glBindVertexArray(skyVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, skyVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+	glBindVertexArray(0);
 }
 
 GLuint SceneRenderer::generateAttachmentTexture(GLboolean depth, GLboolean stencil, int width, int height)

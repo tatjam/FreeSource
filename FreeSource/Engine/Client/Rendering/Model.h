@@ -36,7 +36,7 @@ public:
 	std::vector<std::string> getAllMeshNames();
 	std::vector<Mesh*> getAllMeshes();
 
-    void draw(glm::mat4 world, glm::mat4 proj, LightScene lScene, GLuint shadowMapID);
+    void draw(glm::mat4 world, glm::mat4 proj, LightScene lScene, GLuint shadowMapID, GLuint sky, glm::vec3 cameraPos);
 	void drawShadow(glm::mat4 light, Shader* shadowShader);
 
 	void start();

@@ -1,9 +1,9 @@
 #include "Model.h"
 
 
-void Model::draw(glm::mat4 world, glm::mat4 proj, LightScene lScene, GLuint shadowMapID)
+void Model::draw(glm::mat4 world, glm::mat4 proj, LightScene lScene, GLuint shadowMapID, GLuint sky, glm::vec3 cPos)
 {
-	model->draw(*shader, lScene, transform.modelMatrix, world, proj, shadowMapID);
+	model->draw(*shader, lScene, transform.modelMatrix, world, proj, shadowMapID, sky, cPos);
 }
 
 void Model::drawShadow(glm::mat4 light, Shader* shadowShader)

@@ -20,7 +20,7 @@ public:
 
 	}
 
-	virtual void draw(glm::mat4 world, glm::mat4 proj, LightScene lscene, GLuint prog)
+	virtual void draw(glm::mat4 world, glm::mat4 proj, LightScene lscene, GLuint prog, GLuint sky, glm::vec3 cameraPos)
 	{
 		return;
 	}

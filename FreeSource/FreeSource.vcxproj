@@ -140,6 +140,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="Resource\Shader\basic_skybox.frag" />
+    <None Include="Resource\Shader\basic_skybox.vert" />
     <None Include="Resource\Shader\basic_unlit.frag" />
     <None Include="Resource\Shader\basic_unlit.vert" />
     <None Include="Resource\Shader\framebuffer.frag" />
@@ -161,6 +163,7 @@
     <ClCompile Include="Engine\Client\Rendering\TextureData.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Engine\Client\FPSCamera.h" />
     <ClInclude Include="Engine\Client\Rendering\Drawable.h" />
     <ClInclude Include="Engine\Client\AssetManager.h" />
     <ClInclude Include="Engine\Client\Rendering\Internal\Shader.h" />
@@ -176,6 +179,9 @@
     <ClInclude Include="Engine\Util\Transform.h" />
     <ClInclude Include="Engine\Client\Rendering\SceneRenderer.h" />
     <ClInclude Include="Engine\Client\Rendering\TextureData.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Resource\credits.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

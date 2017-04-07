@@ -54,7 +54,7 @@ public:
 
 	glm::mat4 transform;
 
-	void draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID);
+	void draw(Shader s, LightScene lScene, glm::mat4 transform, glm::mat4 world, glm::mat4 persp, GLuint shadowMapID, GLuint sky, glm::vec3 cPos);
 	void drawShadow(Shader s, glm::mat4 light, glm::mat4 transform);
 	LModel(const GLchar* path, AssetManager* assetManager, unsigned int pflags = DEFAULT_ASSIMP_SETTINGS);
 	~LModel();
